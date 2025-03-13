@@ -2,6 +2,7 @@ package com.renuox.mgmt.bills.controller;
 
 import com.renuox.mgmt.bills.enums.PeriodName;
 import com.renuox.mgmt.bills.enums.PeriodType;
+import com.renuox.mgmt.bills.model.BothPeriods;
 import com.renuox.mgmt.bills.model.Period;
 import com.renuox.mgmt.bills.service.impl.PeriodService;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +20,7 @@ import java.util.Map;
 public class PeriodController {
 
     @Autowired
-    private PeriodService periodService;
+    PeriodService periodService;
 
     @GetMapping("/list")
     public List<Period> listPeriod() {
@@ -34,7 +35,7 @@ public class PeriodController {
     }
 
     @GetMapping("/next-periods")
-    public List<Period> findNextPeriods(@RequestParam int nextPeriods) {
+    public List<BothPeriods> findNextPeriods(@RequestParam int nextPeriods) {
         System.out.println(new Object(){}.getClass().getEnclosingMethod().getName());
         return periodService.findNextPeriods(nextPeriods);
     }
@@ -57,13 +58,13 @@ public class PeriodController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Period> getPeriodById(@PathVariable Long id) {
+    public ResponseEntity<BothPeriods> getPeriodById(@PathVariable Long id) {
         System.out.println(new Object(){}.getClass().getEnclosingMethod().getName());
         return ResponseEntity.ok(periodService.findById(id));
     }
 
     @GetMapping("/current")
-    public List<Period> getCurrentPeriod() {
+    public BothPeriods getCurrentPeriod() {
         System.out.println(new Object(){}.getClass().getEnclosingMethod().getName());
         return periodService.getCurrentPeriod();
     }

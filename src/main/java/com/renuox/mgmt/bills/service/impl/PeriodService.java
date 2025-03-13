@@ -4,6 +4,7 @@ import com.renuox.mgmt.bills.enums.PeriodName;
 import com.renuox.mgmt.bills.enums.PeriodType;
 import com.renuox.mgmt.bills.exception.ResourceNotFoundException;
 import com.renuox.mgmt.bills.exception.ResourceNotSavedException;
+import com.renuox.mgmt.bills.model.BothPeriods;
 import com.renuox.mgmt.bills.model.Period;
 import com.renuox.mgmt.bills.repository.PeriodRepository;
 import com.renuox.mgmt.bills.util.DateUtils;
@@ -12,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.Month;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,23 +30,21 @@ public class PeriodService {
         return periodRepository.findAll();
     }
 
-    public Period findById(Long id) {
-        return periodRepository.findById(id)
+    public BothPeriods findById(Long id) {
+        Period activePeriod = periodRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Period not found with id: " + id));
+        if (activePeriod.getType().equals(PeriodType.ACTIVE)) {
+            Period passivePeriod = this.findByTypeAndNameAndYear(PeriodType.PASSIVE, activePeriod.getName(), activePeriod.getYear());
+            return new BothPeriods(activePeriod, passivePeriod);
+        } else {
+            Period passivePeriod = this.findByTypeAndNameAndYear(PeriodType.ACTIVE, activePeriod.getName(), activePeriod.getYear());
+            return new BothPeriods(passivePeriod, activePeriod);
+        }
     }
 
     public void saveByYear(int year) {
         int currentYear = Year.now().getValue();
         int subtractionYears = year - currentYear;
-        LocalDate currentDate = LocalDate.now();
-        Month currentMonth = currentDate.getMonth();
-        Month month = Month.valueOf(getMothCurrentPeriod(currentDate).split("_")[0]);
-        System.out.println("currentMonth " + currentMonth);
-        System.out.println("Month " + month);
-
-        if (month.compareTo(currentMonth) < 0) {
-            currentDate = currentDate.minusMonths(1).withDayOfMonth(7);
-        }
 
         if (subtractionYears > -1 && subtractionYears < 6) {
             for (PeriodType type : PeriodType.values()) {
@@ -54,11 +52,9 @@ public class PeriodService {
                     if (this.findByTypeAndNameAndYear(type, name, year) == null) {
                         Period period = new Period(type, name, year);
                         DateUtils.setDatesToPeriod(period);
-                        if (currentDate.isBefore(period.getStartDate())) {
-                            periodRepository.save(period);
-                            if (type == PeriodType.PASSIVE) {
-                                billService.saveBudgetByPeriod(period);
-                            }
+                        periodRepository.save(period);
+                        if (type == PeriodType.PASSIVE) {
+                            billService.saveBudgetByPeriod(period);
                         }
                     }
                 }
@@ -73,16 +69,16 @@ public class PeriodService {
         return periodRepository.findByTypeAndNameAndYear(type, name, year);
     }
 
-    public List<Period> getCurrentPeriod() {
-        List<Period> periods = new ArrayList<>(2);
+    public BothPeriods getCurrentPeriod() {
         LocalDate currentDate = LocalDate.now();
-
         String month = this.getMothCurrentPeriod(currentDate);
+        Period activePeriod = this.findByTypeAndNameAndYear(PeriodType.ACTIVE, PeriodName.valueOf(month), currentDate.getYear());
+        if (activePeriod == null) {
+            this.saveByYear(currentDate.getYear());
+        }
+        return new BothPeriods(activePeriod,
+                this.findByTypeAndNameAndYear(PeriodType.PASSIVE, PeriodName.valueOf(month), currentDate.getYear()));
 
-        periods.add(this.findByTypeAndNameAndYear(PeriodType.ACTIVE, PeriodName.valueOf(month), currentDate.getYear()));
-        periods.add(this.findByTypeAndNameAndYear(PeriodType.PASSIVE, PeriodName.valueOf(month), currentDate.getYear()));
-
-        return periods;
     }
 
     private String getMothCurrentPeriod(LocalDate currentDate) {
@@ -107,43 +103,37 @@ public class PeriodService {
                 .orElseThrow(() -> new ResourceNotFoundException("Period not found with year: " + year));
     }
 
-    public List<Period> findNextPeriods(int nextPeriods) {
-        List<Period> periods = new ArrayList<>(nextPeriods * 2);
-        Period currentPeriod = this.getCurrentPeriod().get(0);
+    public List<BothPeriods> findNextPeriods(int nextPeriods) {
+        this.saveByYear(LocalDate.now().getYear());
+        nextPeriods *= 2;
+        List<BothPeriods> bothPeriodsList = new ArrayList<>(nextPeriods);
 
-        LocalDate currentDate = currentPeriod.getStartDate();
+        Period currentActivePeriod = this.getCurrentPeriod().getActivePeriod();
+        int indexCurrentPeriod = currentActivePeriod.getName().ordinal();
 
-        int indexCurrentPeriod = currentPeriod.getName().ordinal();
+        int length = PeriodName.values().length;
+        boolean nextYear = false;
 
         for (int i = 0; i < nextPeriods; i++) {
-            Month month = currentDate.getMonth().plus(i);
-            PeriodName nextPeriod = PeriodName.values()[(indexCurrentPeriod + i)];
-            periods.add(this.findByTypeAndNameAndYear(PeriodType.ACTIVE, nextPeriod, currentPeriod.getYear()));
-            periods.add(this.findByTypeAndNameAndYear(PeriodType.PASSIVE, nextPeriod, currentPeriod.getYear()));
+            int index = (indexCurrentPeriod + i);
+            PeriodName nextPeriod = PeriodName.values()[index];
+            bothPeriodsList.add(new BothPeriods(this.findByTypeAndNameAndYear(PeriodType.ACTIVE, nextPeriod, currentActivePeriod.getYear()),
+                    this.findByTypeAndNameAndYear(PeriodType.PASSIVE, nextPeriod, currentActivePeriod.getYear())));
+            if ((index + 1) == length) {
+                nextYear = true;
+                break;
+            }
         }
 
-//
-//        PeriodName start = currentPeriod.getName();
-//        boolean startFound = false;
-//
-//        for (PeriodName period : PeriodName.values()) {
-//            if (period == start) {
-//                startFound = true;
-//            }
-//            if (startFound) {
-//                periods.add(this.findByTypeAndNameAndYear(PeriodType.ACTIVE, period, currentPeriod.getYear()));
-//                periods.add(this.findByTypeAndNameAndYear(PeriodType.PASSIVE, period, currentPeriod.getYear()));
-//            }
-//        }
-//
-//        for (PeriodName period : PeriodName.values()) {
-//            if (period == start) {
-//                break;
-//            }
-//            periods.add(this.findByTypeAndNameAndYear(PeriodType.ACTIVE, period, currentPeriod.getYear() + 1));
-//            periods.add(this.findByTypeAndNameAndYear(PeriodType.PASSIVE, period, currentPeriod.getYear() + 1));
-//        }
-        return periods;
+        if (nextYear) {
+            this.saveByYear(currentActivePeriod.getYear() + 1);
+            for (int i = 0; i < indexCurrentPeriod; i++) {
+                PeriodName nextPeriod = PeriodName.values()[i];
+                bothPeriodsList.add(new BothPeriods(this.findByTypeAndNameAndYear(PeriodType.ACTIVE, nextPeriod, currentActivePeriod.getYear() + 1),
+                        this.findByTypeAndNameAndYear(PeriodType.PASSIVE, nextPeriod, currentActivePeriod.getYear() + 1)));
+            }
+        }
+        return bothPeriodsList;
     }
 
     public Period update(Long id, @NotNull Period periodRequest) {

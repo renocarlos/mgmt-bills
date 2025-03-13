@@ -1,7 +1,5 @@
 package com.renuox.mgmt.bills.util;
 
-import com.renuox.mgmt.bills.enums.PeriodName;
-import com.renuox.mgmt.bills.enums.PeriodType;
 import com.renuox.mgmt.bills.model.Period;
 
 import java.time.DayOfWeek;
@@ -9,7 +7,6 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 
 public class DateUtils {
 
