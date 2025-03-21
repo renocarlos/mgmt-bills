@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Data
 @Entity
-@Table(name = "bill")
+@Table(name = "bills")
 public class Bill {
 
     @Id
@@ -42,15 +42,19 @@ public class Bill {
     @Column(nullable = false)
     private String note = "";
 
+    @Column(nullable = false)
+    private String type = "";
+
     @ManyToOne
     @JoinColumn(name = "period_id", nullable = false)
     @JsonBackReference
     private Period period;
 
-    public Bill(BigDecimal amount, String concept, String person, Period period) {
+    public Bill(String concept, String person, BigDecimal amount, String type, Period period) {
         this.amount = amount;
         this.concept = concept;
         this.person = person;
+        this.type = type;
         this.period = period;
     }
 }

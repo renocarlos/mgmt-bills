@@ -1,14 +1,26 @@
 package com.renuox.mgmt.bills.util;
 
 import com.renuox.mgmt.bills.model.Period;
+import com.renuox.mgmt.bills.repository.CatalogRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
+
+@Component
 public class DateUtils {
+
+    private static CatalogRepository catalogRepository;
+
+    @Autowired
+    public void setCatalogRepository(CatalogRepository catalogRepository) {
+        DateUtils.catalogRepository = catalogRepository;
+    }
+
 
     public static long getDifferenceDays(LocalDate startDate, LocalDate endDate) {
         return ChronoUnit.DAYS.between(startDate, endDate);
@@ -29,36 +41,34 @@ public class DateUtils {
     }
 
     public static void setDatesToPeriod(Period period) {
-        String[] periodNameSplit = (period.getName().name().split("_"));
 
         int startDay;
         int endDay;
 
-        Month month = Month.valueOf(periodNameSplit[0]);
-        String monthNumber = String.format("%02d", month.getValue());
+        String monthNumber = String.valueOf(period.getMonthNumber());
+
+        monthNumber = monthNumber.length() == 1 ? "0" + monthNumber : monthNumber;
 
         String yearMonth = period.getYear() + "-" + monthNumber;
         String stringStartDate;
 
         LocalDate endDate;
 
-        if (periodNameSplit[1].equals("1")) {
-            endDay = 21;
+        int firstPeriodDay = Integer.parseInt(catalogRepository.findByName("first-period-day").getCode());
+        if (period.getDay() == firstPeriodDay) {
+            endDay = Integer.parseInt(catalogRepository.findByName("second-period-day").getCode());
             String stringEndDate = yearMonth + "-" + endDay;
             endDate = LocalDate.parse(stringEndDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-            startDay = 7;
+            startDay = firstPeriodDay;
         } else {
-            endDay = 7;
+            endDay = firstPeriodDay;
             String stringEndDate = yearMonth + "-01";
-            endDate = LocalDate.parse(stringEndDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    .plusMonths(1).withDayOfMonth(endDay);
-            startDay = 21;
+            endDate = LocalDate.parse(stringEndDate, DateTimeFormatter.ofPattern("yyyy-MM-dd")).plusMonths(1).withDayOfMonth(endDay);
+            startDay = Integer.parseInt(catalogRepository.findByName("second-period-day").getCode());
         }
 
         stringStartDate = yearMonth + "-01";
-        LocalDate startDate = LocalDate.parse(stringStartDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                .withDayOfMonth(startDay);
-
+        LocalDate startDate = LocalDate.parse(stringStartDate, DateTimeFormatter.ofPattern("yyyy-MM-dd")).withDayOfMonth(startDay);
 
         period.setStartDate(startDate);
         period.setEndDate(endDate);

@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Data
 @Entity
-@Table(name = "cardBill")
+@Table(name = "cardBills")
 public class CardBill implements Serializable {
 
     @Id

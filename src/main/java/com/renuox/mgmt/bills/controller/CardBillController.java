@@ -9,13 +9,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-@CrossOrigin(origins = "http://localhost:3000")
+
+@CrossOrigin(origins = "${cors.allowedOrigins}")
 @RestController
-@RequestMapping("/card-bill")
+@RequestMapping("/card-bills")
 public class CardBillController {
 
     @Autowired
-    private CardBillService cardBillService;
+    CardBillService cardBillService;
 
     @GetMapping("/list")
     public List<CardBill> listCardBill() {

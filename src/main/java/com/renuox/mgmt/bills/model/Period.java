@@ -2,8 +2,8 @@ package com.renuox.mgmt.bills.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.renuox.mgmt.bills.enums.PeriodName;
 import com.renuox.mgmt.bills.enums.PeriodType;
+import com.renuox.mgmt.bills.util.DateUtils;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @Data
 @Entity
-@Table(name = "period")
+@Table(name = "periods")
 public class Period {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,11 +32,16 @@ public class Period {
     private PeriodType type;
 
     @Column(nullable = false)
-    @Enumerated(EnumType.ORDINAL)
-    private PeriodName name;
+    private int year;
 
     @Column(nullable = false)
-    private int year;
+    private int monthNumber;
+
+    @Column(nullable = false)
+    private String monthName;
+
+    @Column(nullable = false)
+    private int day;
 
     @Column(nullable = false)
     private BigDecimal totalAmount = new BigDecimal(0);
@@ -47,9 +52,12 @@ public class Period {
     @Column(nullable = false)
     private LocalDate endDate;
 
-    public Period(PeriodType type, PeriodName name, int year) {
+    public Period(PeriodType type, String monthName, int year, int monthNumber, int day) {
         this.type = type;
-        this.name = name;
+        this.monthName = monthName;
         this.year = year;
+        this.monthNumber = monthNumber;
+        this.day = day;
+        DateUtils.setDatesToPeriod(this);
     }
 }

@@ -10,13 +10,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-@CrossOrigin(origins = "http://localhost:3000")
+
+@CrossOrigin(origins = "${cors.allowedOrigins}")
 @RestController
 @RequestMapping("/purchases")
 public class PurchaseController {
 
     @Autowired
-    private PurchaseService purchaseService;
+    PurchaseService purchaseService;
 
     @GetMapping
     public List<Purchase> listPurchase() {
